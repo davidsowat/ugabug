@@ -1,0 +1,5 @@
+node_modules
+/dist
+kurator/node_modules
+kurator/dist
+kurator/.gitignore
