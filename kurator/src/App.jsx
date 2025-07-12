@@ -1,52 +1,116 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import axios from "axios";
 
+// Miljövariabler
 const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI;
 const CLIENT_ID = import.meta.env.VITE_CLIENT_ID;
 const SCOPE = import.meta.env.VITE_SCOPE;
 
-function App() {
+// Skapa verifier för PKCE
+function generateCodeVerifier() {
+  const array = new Uint32Array(56 / 2);
+  crypto.getRandomValues(array);
+  return Array.from(array, (dec) => ("0" + dec.toString(16)).slice(-2)).join("");
+}
+
+// Skapa SHA-256 challenge
+async function sha256(plain) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+// Hanterar callback från Spotify
+function CallbackHandler({ onTokenReceived }) {
+  const location = useLocation();
+  const [log, setLog] = useState([]);
+  const logMessage = (msg) =>
+    setLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+
+  useEffect(() => {
+    const getToken = async () => {
+      const urlParams = new URLSearchParams(location.search);
+      const code = urlParams.get("code");
+      const verifier = localStorage.getItem("verifier");
+
+      if (!code || !verifier) {
+        logMessage("⚠️ Saknar verifier eller kod");
+        return;
+      }
+
+      try {
+        logMessage("🔑 Begär token från Spotify...");
+
+        const data = new URLSearchParams();
+        data.append("client_id", CLIENT_ID);
+        data.append("grant_type", "authorization_code");
+        data.append("code", code);
+        data.append("redirect_uri", REDIRECT_URI);
+        data.append("code_verifier", verifier);
+
+        const response = await axios.post(
+          "https://accounts.spotify.com/api/token",
+          data.toString(),
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
+        );
+
+        const token = response.data.access_token;
+        localStorage.setItem("accessToken", token);
+        logMessage("✅ Inloggning lyckades!");
+        onTokenReceived(token);
+      } catch (err) {
+        logMessage("❌ Fel vid token-begäran: " + err.message);
+      } finally {
+        window.location.href = "/";
+      }
+    };
+
+    getToken();
+  }, [location.search]);
+
+  return (
+    <div className="text-white p-10">
+      <h1>🔁 Bearbetar inloggning...</h1>
+      <div className="text-sm mt-4">
+        {log.map((entry, idx) => (
+          <div key={idx}>{entry}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Förstasidan där användaren loggar in och ser spellistor
+function MainPage({ accessToken, playlists, fetchPlaylists }) {
   const [clientId, setClientId] = useState(CLIENT_ID || "");
   const [apiKey, setApiKey] = useState("");
-  const [accessToken, setAccessToken] = useState(null);
   const [log, setLog] = useState([]);
-  const [playlists, setPlaylists] = useState([]);
 
-  const logMessage = (msg) => {
+  const logMessage = (msg) =>
     setLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
-  };
-
-  const generateCodeVerifier = () => {
-    const array = new Uint32Array(56 / 2);
-    crypto.getRandomValues(array);
-    return Array.from(array, dec => ('0' + dec.toString(16)).slice(-2)).join("");
-  };
-
-  const sha256 = async (plain) => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(plain);
-    const hash = await crypto.subtle.digest("SHA-256", data);
-    return btoa(String.fromCharCode(...new Uint8Array(hash)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-  };
 
   const redirectToSpotifyAuth = async () => {
     if (!clientId || !REDIRECT_URI || !SCOPE) {
       logMessage("❌ Miljövariabler saknas. Kontrollera .env!");
-      console.error({ clientId, REDIRECT_URI, SCOPE });
       return;
     }
 
-    logMessage("🔑 Förbereder Spotify-inloggning...");
     const verifier = generateCodeVerifier();
     const challenge = await sha256(verifier);
-
-    // För felsökning
-    console.log("clientId:", clientId);
-    console.log("redirect_uri:", REDIRECT_URI);
-    console.log("code_challenge:", challenge);
 
     localStorage.setItem("verifier", verifier);
     localStorage.setItem("spotifyClientId", clientId);
@@ -62,58 +126,6 @@ function App() {
 
     const authUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
     window.location = authUrl;
-  };
-
-  const getTokenFromCode = useCallback(
-    async (code) => {
-      const verifier = localStorage.getItem("verifier");
-      try {
-        const res = await axios.post("/api/token", {
-          code,
-          verifier,
-          clientId,
-          redirectUri: REDIRECT_URI,
-        });
-        return res.data.access_token;
-      } catch (err) {
-        logMessage("⚠️ Fel vid hämtning av token: " + err.message);
-        return null;
-      }
-    },
-    [clientId]
-  );
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
-
-    if (code && clientId) {
-      logMessage("📬 Kod mottagen från Spotify, hämtar token...");
-      getTokenFromCode(code).then((token) => {
-        if (token) {
-          setAccessToken(token);
-          logMessage("✅ Inloggning lyckades!");
-        } else {
-          localStorage.clear();
-        }
-      });
-    }
-  }, [clientId, getTokenFromCode]);
-
-  const fetchPlaylists = async () => {
-    if (!accessToken) return;
-    try {
-      logMessage("🎧 Hämtar spellistor...");
-      const res = await axios.get("https://api.spotify.com/v1/me/playlists", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      logMessage(`🎵 Antal spellistor: ${res.data.items.length}`);
-      setPlaylists(res.data.items);
-    } catch (err) {
-      logMessage("⚠️ Fel vid hämtning av spellistor: " + err.message);
-    }
   };
 
   return (
@@ -170,4 +182,44 @@ function App() {
   );
 }
 
-export default App;
+// Huvudkomponenten
+export default function App() {
+  const [accessToken, setAccessToken] = useState(
+    localStorage.getItem("accessToken") || null
+  );
+  const [playlists, setPlaylists] = useState([]);
+
+  const fetchPlaylists = async () => {
+    try {
+      const res = await axios.get("https://api.spotify.com/v1/me/playlists", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setPlaylists(res.data.items);
+    } catch (err) {
+      console.error("Fel vid hämtning av spellistor", err.message);
+    }
+  };
+
+  return (
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <MainPage
+              accessToken={accessToken}
+              playlists={playlists}
+              fetchPlaylists={fetchPlaylists}
+            />
+          }
+        />
+        <Route
+          path="/callback"
+          element={<CallbackHandler onTokenReceived={setAccessToken} />}
+        />
+      </Routes>
+    </Router>
+  );
+}
