@@ -1,3 +1,4 @@
+# ugabug
 # Spotify Kurator
 
 This project contains a React interface styled with Tailwind CSS and an Express backend that generates playlist recommendations using the OpenAI API.
