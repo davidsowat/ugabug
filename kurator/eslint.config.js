@@ -6,29 +6,39 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
+
+  // Frontend
   {
     files: ['**/*.{js,jsx}'],
+    ignores: ['vite.config.js', 'server.js'],
     extends: [
       js.configs.recommended,
       reactHooks.configs['recommended-latest'],
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      ecmaVersion: 2020,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       globals: globals.browser,
+      parser: '@babel/eslint-parser',
       parserOptions: {
-        ecmaVersion: 'latest',
-        ecmaFeatures: { jsx: true },
-        sourceType: 'module',
+        requireConfigFile: false,
+        babelOptions: {
+          presets: ['@babel/preset-react'],
+        },
       },
-  },
-  rules: {
+    },
+    rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
   },
-  },
+
+  // Node-miljö för konfigar
   {
-    files: ['server.js'],
+    files: ['vite.config.js', 'server.js'],
     languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       globals: globals.node,
     },
   },
