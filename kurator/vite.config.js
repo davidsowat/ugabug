@@ -12,6 +12,6 @@ export default defineConfig({
     },
     port: 5173,
     strictPort: true,
-    host: 'https://trackcurator.org', // detta gör att nätverk inte öppnas av misstag
+    host: 'trackcurator.org' // ✔️ bara domännamnet
   },
 });
