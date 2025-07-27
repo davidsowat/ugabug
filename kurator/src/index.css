@@ -1,75 +1,63 @@
-/* spotify-theme.css */
-
-:root {
-  --spotify-black: #121212;
-  --spotify-green: #1db954;
-  --spotify-gray: #b3b3b3;
-  --spotify-white: #ffffff;
-  --spotify-dark-gray: #282828;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body {
+  background-color: #000000; /* svart bakgrund */
+  color: #ffffff;           /* vit text */
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background-color: var(--spotify-black);
-  color: var(--spotify-white);
-}
-
-input, button {
-  font-family: inherit;
-  border-radius: 500px;
-  padding: 12px 20px;
-  font-size: 14px;
-  border: none;
-  outline: none;
-}
-
-input {
-  background-color: var(--spotify-dark-gray);
-  color: var(--spotify-white);
-  border: 1px solid var(--spotify-gray);
-}
-
-button {
-  background-color: var(--spotify-green);
-  color: var(--spotify-white);
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-}
-
-button:hover {
-  background-color: #1ed760;
-}
-
-h1, h2 {
-  font-weight: 700;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  padding: 5px 0;
-}
-
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.header {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  justify-content: center;
 }
 
-.playlist {
-  background-color: var(--spotify-dark-gray);
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
+.Login-box {
+  background-color: #121212; /* Spotifys mörka UI */
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.Login-box h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  font-weight: bold;
+}
+
+.Login-box input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: #2a2a2a;
+  color: white;
+  font-size: 1rem;
+}
+
+.Login-box input::placeholder {
+  color: #999;
+}
+
+.Login-box button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #1DB954;
+  color: black;
+  font-weight: bold;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.Login-box button:hover {
+  background-color: #1ed760;
 }

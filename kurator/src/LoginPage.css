@@ -1,0 +1,22 @@
+/* LoginPage.css */
+.login-container {
+  background-color: black;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Helvetica Neue', sans-serif;
+}
+
+.login-box {
+  background-color: #121212;
+  padding: 2rem;
+  border-radius: 1rem;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.logo {
+  max-width: 200px;
+  margin-bottom: 1rem;
+}

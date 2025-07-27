@@ -3,23 +3,24 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  useNavigate,
   useLocation,
 } from "react-router-dom";
 import axios from "axios";
+import ResultPage from "./ResultPage";
+import LoginPage from "./LoginPage";
+import './index.css';
 
-// Miljövariabler
 const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI;
 const CLIENT_ID = import.meta.env.VITE_CLIENT_ID;
 const SCOPE = import.meta.env.VITE_SCOPE;
 
-// Skapa verifier för PKCE
 function generateCodeVerifier() {
   const array = new Uint32Array(56 / 2);
   crypto.getRandomValues(array);
   return Array.from(array, (dec) => ("0" + dec.toString(16)).slice(-2)).join("");
 }
 
-// Skapa SHA-256 challenge
 async function sha256(plain) {
   const encoder = new TextEncoder();
   const data = encoder.encode(plain);
@@ -30,12 +31,9 @@ async function sha256(plain) {
     .replace(/=+$/, "");
 }
 
-// Hanterar callback från Spotify
 function CallbackHandler({ onTokenReceived }) {
   const location = useLocation();
-  const [log, setLog] = useState([]);
-  const logMessage = (msg) =>
-    setLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getToken = async () => {
@@ -43,14 +41,9 @@ function CallbackHandler({ onTokenReceived }) {
       const code = urlParams.get("code");
       const verifier = localStorage.getItem("verifier");
 
-      if (!code || !verifier) {
-        logMessage("⚠️ Saknar verifier eller kod");
-        return;
-      }
+      if (!code || !verifier) return;
 
       try {
-        logMessage("🔑 Begär token från Spotify...");
-
         const data = new URLSearchParams();
         data.append("client_id", CLIENT_ID);
         data.append("grant_type", "authorization_code");
@@ -62,145 +55,151 @@ function CallbackHandler({ onTokenReceived }) {
           "https://accounts.spotify.com/api/token",
           data.toString(),
           {
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
           }
         );
 
         const token = response.data.access_token;
         localStorage.setItem("accessToken", token);
-        logMessage("✅ Inloggning lyckades!");
         onTokenReceived(token);
+        navigate("/");
       } catch (err) {
-        logMessage("❌ Fel vid token-begäran: " + err.message);
-      } finally {
-        window.location.href = "/";
+        console.error("Token error", err);
       }
     };
 
     getToken();
-  }, [location.search]);
+  }, [location.search, onTokenReceived, navigate]);
 
-  return (
-    <div className="text-white p-10">
-      <h1>🔁 Bearbetar inloggning...</h1>
-      <div className="text-sm mt-4">
-        {log.map((entry, idx) => (
-          <div key={idx}>{entry}</div>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="text-white p-10">🔁 Loggar in med Spotify...</div>;
 }
 
-// Förstasidan där användaren loggar in och ser spellistor
-function MainPage({ accessToken, playlists, fetchPlaylists }) {
-  const [clientId, setClientId] = useState(CLIENT_ID || "");
+function MainPage({ accessToken, setAccessToken }) {
+  const [playlists, setPlaylists] = useState([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [apiKey, setApiKey] = useState("");
-  const [log, setLog] = useState([]);
+  const navigate = useNavigate();
 
-  const logMessage = (msg) =>
-    setLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
-
-  const redirectToSpotifyAuth = async () => {
-    if (!clientId || !REDIRECT_URI || !SCOPE) {
-      logMessage("❌ Miljövariabler saknas. Kontrollera .env!");
-      return;
+  const fetchPlaylists = async () => {
+    try {
+      const res = await axios.get("https://api.spotify.com/v1/me/playlists", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setPlaylists(res.data.items);
+    } catch (err) {
+      console.error("Kunde inte hämta spellistor:", err);
     }
+  };
 
+  const handleStartAnalysis = () => {
+    if (!selectedPlaylist) return;
+
+    const genresInfo = [
+      {
+        genre: "Techno",
+        personality: "Strukturerad & kreativ",
+        funFact: "Techno skapades i Detroit på 80-talet!",
+      },
+      {
+        genre: "Trance",
+        personality: "Visionär dagdrömmare",
+        funFact: "Trance har ofta BPM runt 138 — därav vår titel 😄",
+      },
+    ];
+
+    const recommendedTracks = [
+      "spotify:track:5uEYRdEIh9Bo4fpjDd4Na9",
+      "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp",
+    ];
+
+    const playlistUri = selectedPlaylist.uri;
+
+    navigate("/result", {
+      state: {
+        accessToken,
+        playlistUri,
+        genresInfo,
+        recommendedTracks,
+        userName: selectedPlaylist.owner.display_name || "Du",
+      },
+    });
+  };
+
+  const loginWithSpotify = async () => {
     const verifier = generateCodeVerifier();
     const challenge = await sha256(verifier);
 
     localStorage.setItem("verifier", verifier);
-    localStorage.setItem("spotifyClientId", clientId);
 
     const params = new URLSearchParams({
       response_type: "code",
-      client_id: clientId,
+      client_id: CLIENT_ID,
       scope: SCOPE,
       redirect_uri: REDIRECT_URI,
       code_challenge_method: "S256",
       code_challenge: challenge,
     });
 
-    const authUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
-    window.location = authUrl;
+    window.location = `https://accounts.spotify.com/authorize?${params.toString()}`;
   };
 
   return (
     <div className="bg-black text-white min-h-screen p-10 font-sans">
-      <h1 className="text-3xl font-bold mb-4">Spotify Kurator</h1>
+      <h1 className="text-3xl font-bold mb-4">🎧 Spotify Kurator</h1>
 
-      <div className="space-y-2 mb-4">
-        <input
-          className="p-2 w-full bg-gray-800 border border-gray-600 rounded"
-          placeholder="Spotify Client ID"
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-        />
-        <input
-          type="password"
-          className="p-2 w-full bg-gray-800 border border-gray-600 rounded"
-          placeholder="OpenAI API Key"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-        />
+      {!accessToken ? (
         <button
-          onClick={redirectToSpotifyAuth}
-          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded"
+          onClick={loginWithSpotify}
+          className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded"
         >
           Logga in med Spotify
         </button>
-        {accessToken && (
+      ) : (
+        <>
           <button
             onClick={fetchPlaylists}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded mb-4"
           >
-            Hämta spellistor
+            Hämta mina spellistor
           </button>
-        )}
-      </div>
 
-      <div className="bg-gray-900 p-4 rounded h-64 overflow-y-scroll mb-4 text-sm">
-        {log.map((entry, idx) => (
-          <div key={idx}>{entry}</div>
-        ))}
-      </div>
+          {playlists.length > 0 && (
+            <div className="bg-gray-800 p-4 rounded">
+              <h2 className="text-xl mb-2">Välj en spellista</h2>
+              <select
+                onChange={(e) =>
+                  setSelectedPlaylist(
+                    playlists.find((p) => p.id === e.target.value)
+                  )
+                }
+                className="text-black p-2 rounded w-full mb-4"
+              >
+                <option value="">-- Välj --</option>
+                {playlists.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
 
-      {playlists.length > 0 && (
-        <div className="bg-gray-800 p-4 rounded">
-          <h2 className="text-xl font-semibold mb-2">Dina spellistor</h2>
-          <ul className="list-disc pl-6">
-            {playlists.map((p) => (
-              <li key={p.id}>{p.name}</li>
-            ))}
-          </ul>
-        </div>
+              <button
+                onClick={handleStartAnalysis}
+                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded"
+              >
+                Starta analys
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-// Huvudkomponenten
 export default function App() {
   const [accessToken, setAccessToken] = useState(
     localStorage.getItem("accessToken") || null
   );
-  const [playlists, setPlaylists] = useState([]);
-
-  const fetchPlaylists = async () => {
-    try {
-      const res = await axios.get("https://api.spotify.com/v1/me/playlists", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      setPlaylists(res.data.items);
-    } catch (err) {
-      console.error("Fel vid hämtning av spellistor", err.message);
-    }
-  };
 
   return (
     <Router>
@@ -210,16 +209,44 @@ export default function App() {
           element={
             <MainPage
               accessToken={accessToken}
-              playlists={playlists}
-              fetchPlaylists={fetchPlaylists}
+              setAccessToken={setAccessToken}
             />
           }
+        />
+        <Route
+          path="/login"
+          element={<LoginPage />}
         />
         <Route
           path="/callback"
           element={<CallbackHandler onTokenReceived={setAccessToken} />}
         />
+        <Route
+          path="/result"
+          element={<ResultWrapper />}
+        />
       </Routes>
     </Router>
+  );
+}
+
+function ResultWrapper() {
+  const location = useLocation();
+  const {
+    accessToken,
+    playlistUri,
+    genresInfo,
+    recommendedTracks,
+    userName,
+  } = location.state || {};
+
+  return (
+    <ResultPage
+      accessToken={accessToken}
+      playlistUri={playlistUri}
+      genresInfo={genresInfo}
+      recommendedTracks={recommendedTracks}
+      userName={userName}
+    />
   );
 }
