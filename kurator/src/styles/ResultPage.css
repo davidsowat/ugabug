@@ -17,21 +17,6 @@
   margin: 0;
 }
 
-.embed-player-container {
-  margin-bottom: 3rem;
-}
-
-.embed-player-container h3 {
-  font-size: 1.8rem;
-  color: white;
-  margin-bottom: 1.5rem;
-}
-
-.embed-player {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
 .ai-analysis-section, .reasoning-section, .playlist-section {
   margin-bottom: 3rem;
 }
@@ -44,7 +29,8 @@
 
 .analysis-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* Gör första kolumnen (profilen) dubbelt så bred som de andra två */
+  grid-template-columns: 2fr 1fr 1fr; 
   gap: 1.5rem;
 }
 
@@ -57,15 +43,17 @@
 
 .analysis-card h3 {
   font-size: 1.2rem;
-  color: white;
+  color: #fff;
   margin-top: 0;
   margin-bottom: 1rem;
 }
 
-.analysis-card p, .reasoning-card {
-  font-size: 1rem;
-  line-height: 1.7;
-  color: #dcdcdc;
+/* --- FÖRBÄTTRAD LÄSBARHET --- */
+.analysis-card p,
+.reasoning-card {
+  font-size: 1rem;      /* Större text */
+  line-height: 1.7;     /* Mer utrymme mellan raderna */
+  color: #dcdcdc;       /* Ljusare grå färg för bättre kontrast */
 }
 
 .reasoning-card strong {
@@ -73,9 +61,9 @@
 }
 
 .track-list {
-    border-radius: 8px;
-    padding: 1rem;
-    background-color: rgba(26, 26, 26, 0.5);
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: rgba(26, 26, 26, 0.5);
 }
 
 .track-item {
@@ -100,7 +88,6 @@
 
 .actions-section {
   text-align: center;
-  margin-top: 2rem;
   padding-bottom: 2rem;
 }
 

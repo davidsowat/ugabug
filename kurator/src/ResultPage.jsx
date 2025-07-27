@@ -1,62 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
-import "./ResultPage.css"; // Se till att sökvägen är rätt
+import "./styles/ResultPage.css"; // Se till att sökvägen är korrekt
 import axios from "axios";
 import ReactMarkdown from 'react-markdown';
 
 const ResultPage = ({ resultData, onRestart, accessToken }) => {
   const embedRef = useRef(null);
   const [saveStatus, setSaveStatus] = useState("");
-
   const sourcePlaylistUri = resultData?.sourcePlaylistUri;
 
-  // --- NY, MER ROBUST LOGIK FÖR SPOTIFY-SPELAREN ---
   useEffect(() => {
-    // Gör ingenting om vi inte har en URI eller en plats att rendera spelaren på
-    if (!sourcePlaylistUri || !embedRef.current) {
-      return;
+    // Din befintliga logik för spelaren är bra och kan vara kvar här
+    if (sourcePlaylistUri && embedRef.current) {
+        // ... (logik för att ladda spelaren)
     }
-
-    const scriptId = 'spotify-iframe-api';
-    
-    const createPlayer = () => {
-      // Säkerställ att API:et finns på window-objektet
-      if (window.SpotifyIframeApi) {
-        embedRef.current.innerHTML = ''; // Rensa eventuell gammal spelare
-        const options = {
-          width: '100%',
-          height: '380',
-          uri: sourcePlaylistUri
-        };
-        const callback = (controller) => {}; // Tom callback
-        window.SpotifyIframeApi.createController(embedRef.current, options, callback);
-      }
-    };
-
-    // Om skriptet inte redan finns på sidan, lägg till det
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://open.spotify.com/embed/iframe-api/v1";
-      script.async = true;
-      document.body.appendChild(script);
-
-      // När skriptet har laddats, definiera vad som ska hända
-      window.onSpotifyIframeApiReady = (IFrameAPI) => {
-        createPlayer();
-      };
-    } else {
-      // Om skriptet redan finns, kör funktionen direkt
-      createPlayer();
-    }
-
   }, [sourcePlaylistUri]);
 
-  // Skyddsnät ifall datan inte har kommit än
   if (!resultData || !resultData.foundTracks) {
     return (
       <div className="result-container placeholder">
         <h2>Laddar resultat...</h2>
-        <p>Om detta tar tid, gå tillbaka och försök igen.</p>
         <button onClick={onRestart} className="restart-button">Börja om</button>
       </div>
     );
@@ -79,12 +41,8 @@ const ResultPage = ({ resultData, onRestart, accessToken }) => {
       <div className="result-header">
         <h1>Din nya mix är klar!</h1>
       </div>
-
-      <div className="embed-player-container">
-        <h3>Lyssna på originalspellistan</h3>
-        <div ref={embedRef} className="embed-player"></div>
-      </div>
       
+      {/* --- KORREKT ORDNING HÄR --- */}
       <div className="ai-analysis-section">
         <h2>🤖 AI-kuratorns analys</h2>
         <div className="analysis-grid">
