@@ -1,0 +1,145 @@
+.result-container {
+  padding: 2rem 3rem;
+  background: linear-gradient(180deg, #222 0%, #121212 40%);
+  color: #b3b3b3;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.result-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.result-header h1 {
+  font-size: 3rem;
+  color: white;
+  margin: 0;
+}
+
+.embed-player-container {
+  margin-bottom: 3rem;
+}
+
+.embed-player-container h3 {
+  font-size: 1.8rem;
+  color: white;
+  margin-bottom: 1.5rem;
+}
+
+.embed-player {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ai-analysis-section, .reasoning-section, .playlist-section {
+  margin-bottom: 3rem;
+}
+
+.ai-analysis-section h2, .reasoning-section h2, .playlist-section h2 {
+  font-size: 1.8rem;
+  color: white;
+  margin-bottom: 1.5rem;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.analysis-card, .reasoning-card {
+  background-color: #1a1a1a;
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+}
+
+.analysis-card h3 {
+  font-size: 1.2rem;
+  color: white;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.analysis-card p, .reasoning-card {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #dcdcdc;
+}
+
+.reasoning-card strong {
+  color: #1DB954;
+}
+
+.track-list {
+    border-radius: 8px;
+    padding: 1rem;
+    background-color: rgba(26, 26, 26, 0.5);
+}
+
+.track-item {
+  display: grid;
+  grid-template-columns: 30px 50px 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.track-item:hover {
+  background-color: #2a2a2a;
+}
+
+.track-number { justify-self: center; }
+.track-item img { width: 50px; height: 50px; border-radius: 4px; }
+.track-info { display: flex; flex-direction: column; }
+.track-title { color: white; font-weight: 500; }
+.track-artist { font-size: 0.9rem; }
+
+.actions-section {
+  text-align: center;
+  margin-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.save-button, .restart-button {
+  border: none;
+  border-radius: 30px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  margin: 0 0.5rem;
+}
+
+.save-button {
+  background-color: #1DB954;
+  color: black;
+  padding: 15px 30px;
+}
+
+.restart-button {
+  background-color: transparent;
+  color: white;
+  border: 1px solid #555;
+  padding: 14px 29px;
+}
+
+.save-button:hover, .restart-button:hover {
+  transform: scale(1.05);
+}
+
+.save-status {
+  margin-top: 1rem;
+  color: #1DB954;
+}
+
+.result-container.placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}

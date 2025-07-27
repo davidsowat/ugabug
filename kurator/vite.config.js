@@ -12,6 +12,6 @@ export default defineConfig({
     },
     port: 5173,
     strictPort: true,
-    host: '127.0.0.1', // detta gör att nätverk inte öppnas av misstag
+    host: true, // detta gör att nätverk inte öppnas av misstag
   },
 });

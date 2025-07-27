@@ -1,105 +1,141 @@
-.criteria-container {
-  padding: 48px 32px;
-  max-width: 800px;
-  margin: auto;
+.criteria-view-container {
+  color: #b3b3b3;
+  background-color: rgba(26, 26, 26, 0.7);
+  padding: 2rem;
+  border-radius: 8px;
+  margin-top: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.criteria-header {
+  text-align: left;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.criteria-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
   color: white;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  background-color: #121212;
-  border-radius: 12px;
-  box-shadow: 0 0 32px rgba(0, 0, 0, 0.4);
 }
 
-h2 {
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 32px;
+.criteria-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.criteria-group {
-  margin-bottom: 32px;
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: opacity 0.3s ease;
 }
 
-.criteria-group label {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.bpm-range {
+.form-group-header {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.bpm-range input,
-.criteria-group input[type="number"] {
-  width: 100px;
-  padding: 10px 14px;
-  border-radius: 6px;
-  border: none;
-  background-color: #2a2a2a;
+.form-group-header label {
+  cursor: pointer;
+  font-weight: bold;
+  color: #fff;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #1DB954;
+  cursor: pointer;
+}
+
+.criteria-form input[type="text"] {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid transparent;
   color: white;
-  font-size: 16px;
+  padding: 12px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.criteria-form input[type="text"]:focus {
+  background-color: #333;
+  border-color: white;
   outline: none;
 }
 
-.genre-grid {
+.button-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
-.genre-btn {
-  background-color: #2a2a2a;
-  border: 1px solid #555;
-  border-radius: 24px;
-  padding: 8px 18px;
-  color: white;
+.option-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 500px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
   transition: all 0.2s ease;
 }
 
-.genre-btn:hover {
-  background-color: #3a3a3a;
+.option-button:not(:disabled):hover {
+  border-color: white;
 }
 
-.genre-btn.active {
-  background-color: #1ed760;
-  color: #000;
-  border-color: #1ed760;
+.option-button.selected {
+  background-color: #fff;
+  color: black;
+  font-weight: bold;
 }
 
-.toggle label {
+.range-slider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 1rem;
 }
 
-.toggle input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: #1ed760;
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; background: #535353;
+  border-radius: 5px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; background: #fff;
+  cursor: pointer; border-radius: 50%;
+}
+input[type="range"]:hover { background: #1DB954; }
+
+.form-group.disabled {
+  opacity: 0.4;
 }
 
-.next-button {
-  margin-top: 30px;
-  background-color: #1ed760;
+.form-group.disabled input,
+.form-group.disabled button {
+  pointer-events: none;
+}
+
+.confirm-button {
+  background-color: #1DB954;
   color: black;
-  padding: 14px 28px;
-  font-weight: bold;
+  padding: 15px 30px;
   border: none;
   border-radius: 30px;
+  font-weight: bold;
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s ease;
-  display: inline-block;
+  transition: transform 0.2s ease;
+  align-self: center;
+  margin-top: 1rem;
+  width: 50%;
 }
 
-.next-button:hover {
-  background-color: #1db954;
-}
+.confirm-button:hover { transform: scale(1.05); }
