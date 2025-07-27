@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
 import LoginPage from './LoginPage';
 import PlaylistSelector from './PlaylistSelector';
 import ResultPage from './ResultPage';
 import AuthCallback from './AuthCallback';
 
-// --- LADDNINGS-OVERLAY MED GRÖN SPINNER ---
 const AnalysisOverlay = ({ message }) => (
   <div style={{
     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -17,21 +15,15 @@ const AnalysisOverlay = ({ message }) => (
   }}>
     <div style={{
       border: '4px solid rgba(255, 255, 255, 0.2)',
-      borderLeftColor: '#1DB954', // Spotify-grön
+      borderLeftColor: '#1DB954',
       borderRadius: '50%',
       width: '50px',
       height: '50px',
       animation: 'spin 1s linear infinite',
       marginBottom: '1.5rem'
     }}></div>
-    <p style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{message}</p>
-    <p>Detta kan ta en liten stund...</p>
-    {/* CSS-animationen för spinnern */}
-    <style>{`
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
+    <p style={{ fontSize: '1.5rem' }}>{message}</p>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );
 
@@ -78,17 +70,16 @@ const App = () => {
         setIsLoading(true);
 
         try {
-            setLoadingMessage(`Steg 1: Hämtar hela din spellista...`);
+            setLoadingMessage(`Hämtar hela spellistan...`);
             let allTracks = []; let nextUrl = playlistForGeneration.tracks.href;
             while (nextUrl) {
                 const tracksResponse = await axios.get(nextUrl, { headers: { 'Authorization': `Bearer ${accessToken}` }});
                 allTracks = allTracks.concat(tracksResponse.data.items.filter(item => item.track));
                 nextUrl = tracksResponse.data.next;
-                setLoadingMessage(`Steg 1: Hämtar... (${allTracks.length} / ${playlistForGeneration.tracks.total} låtar)`);
+                setLoadingMessage(`Hämtar... (${allTracks.length} / ${playlistForGeneration.tracks.total} låtar)`);
             }
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            setLoadingMessage("Steg 2: Analyserar artister...");
+            
+            setLoadingMessage("Analyserar artister...");
             const artistIds = [...new Set(allTracks.flatMap(item => item.track.artists.map(a => a.id)))];
             const artistGenreMap = new Map();
             for (let i = 0; i < artistIds.length; i += 50) {
@@ -99,20 +90,17 @@ const App = () => {
             const fullTrackData = allTracks.map(item => ({ name: item.track.name, artist: item.track.artists[0].name, genres: item.track.artists.flatMap(a => artistGenreMap.get(a.id) || []) }));
 
             const batchSize = 500; const totalBatches = Math.ceil(fullTrackData.length / batchSize);
-            let sentTracksCount = 0;
             for (let i = 0; i < totalBatches; i++) {
                 const batchNumber = i + 1; const batch = fullTrackData.slice(i * batchSize, (i + 1) * batchSize);
-                sentTracksCount += batch.length;
-                setLoadingMessage(`Steg 3: Skickar låtar till servern... (${sentTracksCount} / ${fullTrackData.length})`);
+                setLoadingMessage(`Skickar låtar... (${(i + 1) * batchSize < fullTrackData.length ? (i + 1) * batchSize : fullTrackData.length} / ${fullTrackData.length})`);
                 await axios.post('http://localhost:3000/batch', { userId, batchNumber, totalBatches, tracks: batch });
             }
-            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            setLoadingMessage(`Steg 4: Ber AI:n att analysera de ${fullTrackData.length} låtarna...`);
+            setLoadingMessage(`Ber AI:n att analysera de ${fullTrackData.length} låtarna...`);
             const backendResponse = await axios.post('http://localhost:3000/analyze', { userId, criteria });
             const aiResult = backendResponse.data;
             
-            setLoadingMessage("Steg 5: Hittar rekommenderade låtar...");
+            setLoadingMessage("Hittar rekommenderade låtar...");
             const searchPromises = aiResult.songRecommendations.map(songString => axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(songString)}&type=track&limit=1`, { headers: { 'Authorization': `Bearer ${accessToken}` } }));
             const searchResults = await Promise.allSettled(searchPromises);
             const foundTracks = searchResults.filter(res => res.status === 'fulfilled' && res.value.data.tracks.items.length > 0).map(res => res.value.data.tracks.items[0]);
@@ -123,30 +111,33 @@ const App = () => {
         } catch (error) {
            setIsLoading(false);
            console.error("Fel under generering:", error);
-           alert("Något gick fel. Kontrollera konsolen i både webbläsaren och servern.");
+           alert("Något gick fel. Kontrollera konsolen.");
         }
     };
 
     return (
-        <Routes>
-            <Route path="/callback" element={<AuthCallback onTokenReceived={handleTokenReceived} />} />
-            <Route path="/" element={
-                accessToken ?
-                    <PlaylistSelector
-                        token={accessToken}
-                        onLogout={handleLogout}
-                        handleGeneratePlaylist={handleGeneratePlaylist}
-                    /> :
-                    <LoginPage />
-            } />
-            <Route path="/result" element={
-                <ResultPage
-                    resultData={generatedResult}
-                    onRestart={() => navigate('/')}
-                    accessToken={accessToken}
-                />
-            } />
-        </Routes>
+        <>
+            {isLoading && <AnalysisOverlay message={loadingMessage} />}
+            <Routes>
+                <Route path="/callback" element={<AuthCallback onTokenReceived={handleTokenReceived} />} />
+                <Route path="/" element={
+                    accessToken ?
+                        <PlaylistSelector
+                            token={accessToken}
+                            onLogout={handleLogout}
+                            handleGeneratePlaylist={handleGeneratePlaylist}
+                        /> :
+                        <LoginPage />
+                } />
+                <Route path="/result" element={
+                    <ResultPage
+                        resultData={generatedResult}
+                        onRestart={() => navigate('/')}
+                        accessToken={accessToken}
+                    />
+                } />
+            </Routes>
+        </>
     );
 };
 
