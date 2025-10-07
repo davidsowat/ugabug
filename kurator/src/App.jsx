@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import LoginPage from './LoginPage';
+import LoginPage from './loginpage';
 import PlaylistSelector from './PlaylistSelector';
 import ResultPage from './ResultPage';
 import AuthCallback from './AuthCallback';

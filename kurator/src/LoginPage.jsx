@@ -1,43 +1,64 @@
 import React from "react";
-import "./LoginPage.css"; // Se till att den här raden finns och är korrekt
+import "./LoginPage.css";
 import spotifyLogo from "./Spotify_Primary_Logo_RGB_White.png";
 
-// PKCE-hjälpfunktioner för inloggning
+// === PKCE helpers ===
 const generateRandomString = (length) => {
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const values = crypto.getRandomValues(new Uint8Array(length));
-  return values.reduce((acc, x) => acc + possible[x % possible.length], '');
+  return Array.from(values, (x) => possible[x % possible.length]).join("");
 };
 const sha256 = async (plain) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(plain);
-  return window.crypto.subtle.digest('SHA-256', data);
+  const data = new TextEncoder().encode(plain);
+  return crypto.subtle.digest("SHA-256", data);
 };
-const base64encode = (input) => {
-  return btoa(String.fromCharCode(...new Uint8Array(input)))
-    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-};
+const base64url = (arrayBuffer) =>
+  btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 
 export default function LoginPage() {
   const handleLoginClick = async () => {
-    const codeVerifier = generateRandomString(64);
-    localStorage.setItem('spotify_code_verifier', codeVerifier);
-    const hashed = await sha256(codeVerifier);
-    const codeChallenge = base64encode(hashed);
+    try {
+      const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID; // ← viktig!
+      if (!CLIENT_ID) {
+        alert("Saknar VITE_SPOTIFY_CLIENT_ID. Sätt den i .env/Pages settings.");
+        return;
+      }
+      if (location.protocol !== "https:" && location.hostname !== "localhost") {
+        alert("Spotify kräver https i produktion. Öppna sajten via https://");
+        return;
+      }
 
-    const clientId = import.meta.env.VITE_CLIENT_ID;
-    const redirectUri = `${window.location.origin}/callback`;
-    const scope = 'playlist-read-private playlist-read-collaborative user-read-private playlist-modify-private playlist-modify-public';
+      // PKCE
+      const verifier = generateRandomString(64);
+      localStorage.setItem("spotify_code_verifier", verifier);
+      const challenge = base64url(await sha256(verifier));
 
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: clientId,
-      scope: scope,
-      code_challenge_method: 'S256',
-      code_challenge: codeChallenge,
-      redirect_uri: redirectUri,
-    });
-    window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+      const redirectUri = `${window.location.origin}/callback`;
+      const scope = [
+        "playlist-read-private",
+        "playlist-read-collaborative",
+        "user-read-private",
+        "playlist-modify-private",
+        "playlist-modify-public",
+      ].join(" ");
+
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: CLIENT_ID,
+        scope,
+        code_challenge_method: "S256",
+        code_challenge: challenge,
+        redirect_uri: redirectUri,
+      });
+
+      window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+    } catch (e) {
+      console.error(e);
+      alert("Kunde inte starta inloggning: " + (e?.message || e));
+    }
   };
 
   return (
