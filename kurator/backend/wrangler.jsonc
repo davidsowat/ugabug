@@ -1,0 +1,8 @@
+{
+  "name": "spotify-kurator-backend",
+  "main": "src/index.js",
+  "compatibility_date": "2025-10-04",
+  "routes": [
+    { "pattern": "api.trackcurator.org/*", "zone_name": "trackcurator.org" }
+  ]
+}
