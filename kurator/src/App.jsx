@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import LoginPage from './loginpage';
+import LoginPage from './LoginPage.jsx';
 import PlaylistSelector from './PlaylistSelector';
 import ResultPage from './ResultPage';
 import AuthCallback from './AuthCallback';
@@ -93,11 +93,11 @@ const App = () => {
             for (let i = 0; i < totalBatches; i++) {
                 const batchNumber = i + 1; const batch = fullTrackData.slice(i * batchSize, (i + 1) * batchSize);
                 setLoadingMessage(`Skickar låtar... (${(i + 1) * batchSize < fullTrackData.length ? (i + 1) * batchSize : fullTrackData.length} / ${fullTrackData.length})`);
-                await axios.post('http://localhost:3000/batch', { userId, batchNumber, totalBatches, tracks: batch });
+                await axios.post('${API_BASE}/batch', { userId, batchNumber, totalBatches, tracks: batch });
             }
 
             setLoadingMessage(`Ber AI:n att analysera de ${fullTrackData.length} låtarna...`);
-            const backendResponse = await axios.post('http://localhost:3000/analyze', { userId, criteria });
+            const backendResponse = await axios.post('${API_BASE}/analyze', { userId, criteria });
             const aiResult = backendResponse.data;
             
             setLoadingMessage("Hittar rekommenderade låtar...");
