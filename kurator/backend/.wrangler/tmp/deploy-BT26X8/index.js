@@ -1,43 +1,40 @@
-export default {
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+
+// src/index.js
+var index_default = {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (req.method === "OPTIONS") return new Response(null, { headers: cors(req) });
-
     if (url.pathname === "/analyze" && req.method === "POST") {
       try {
-        const body = await req.json(); // { token, playlistId, criteria, createNew, llmLimit }
+        const body = await req.json();
         const tracks = await getPlaylistTracks(body.token, body.playlistId);
         const analysis = await analyzeWithOpenAI(env, tracks, body.criteria, body.llmLimit || 300);
-
         let newPlaylist = null;
         if (body.createNew) {
           newPlaylist = await createPlaylistAndAdd(
             body.token,
-            analysis.suggestions.map(s => s.uri),
+            analysis.suggestions.map((s) => s.uri),
             analysis.title || "Kuraterad spellista",
             analysis.description || "Skapad av TrackCurator"
           );
         }
-
         return json({ ok: true, analysis, newPlaylist }, 200, cors(req));
       } catch (e) {
         return json({ ok: false, error: e.message || "Analyze failed" }, 500, cors(req));
       }
     }
-
     if (url.pathname === "/batch" && req.method === "POST") {
       return json({ ok: true, storedChunks: 1 }, 200, cors(req));
     }
-
     return json({ ok: false, error: "Not found" }, 404, cors(req));
   }
 };
-
-const ALLOWED = new Set([
+var ALLOWED = /* @__PURE__ */ new Set([
   "https://trackcurator.org",
   "https://kurator-ui.pages.dev"
 ]);
-
 function cors(req) {
   const o = req.headers.get("Origin");
   const allow = ALLOWED.has(o) ? o : "";
@@ -47,11 +44,11 @@ function cors(req) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization"
   };
 }
+__name(cors, "cors");
 function json(d, s = 200, h = {}) {
   return new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json", ...h } });
 }
-
-// ---- Spotify + OpenAI helpers ----
+__name(json, "json");
 async function getPlaylistTracks(accessToken, playlistId) {
   let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
   const out = [];
@@ -62,8 +59,10 @@ async function getPlaylistTracks(accessToken, playlistId) {
     for (const it of j.items || []) {
       const tr = it.track;
       if (tr) out.push({
-        id: tr.id, uri: tr.uri, name: tr.name,
-        artists: tr.artists?.map(a => a.name).join(", "),
+        id: tr.id,
+        uri: tr.uri,
+        name: tr.name,
+        artists: tr.artists?.map((a) => a.name).join(", "),
         duration_ms: tr.duration_ms
       });
     }
@@ -71,13 +70,11 @@ async function getPlaylistTracks(accessToken, playlistId) {
   }
   return out;
 }
-
+__name(getPlaylistTracks, "getPlaylistTracks");
 async function analyzeWithOpenAI(env, tracks, criteria, llmLimit) {
-  const sys = `Du är en spellistekurator. Returnera JSON med:
+  const sys = `Du \xE4r en spellistekurator. Returnera JSON med:
   title, description, cards[ {title,emoji,body,why_it_matters} ], suggestions[ {uri} ]`;
-
-  const user = { criteria, sample: tracks.slice(0, 80).map(t => ({ name: t.name, artists: t.artists })) };
-
+  const user = { criteria, sample: tracks.slice(0, 80).map((t) => ({ name: t.name, artists: t.artists })) };
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -102,17 +99,16 @@ async function analyzeWithOpenAI(env, tracks, criteria, llmLimit) {
     title: out.title || "Kuraterad spellista",
     description: out.description || "",
     cards: out.cards || [],
-    suggestions: (out.suggestions || []).map(s => (typeof s === "string" ? { uri: s } : s)).slice(0, llmLimit)
+    suggestions: (out.suggestions || []).map((s) => typeof s === "string" ? { uri: s } : s).slice(0, llmLimit)
   };
 }
-
+__name(analyzeWithOpenAI, "analyzeWithOpenAI");
 async function createPlaylistAndAdd(accessToken, uris, title, description) {
   const meR = await fetch("https://api.spotify.com/v1/me", {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   if (!meR.ok) throw new Error(`Spotify me ${meR.status}`);
   const me = await meR.json();
-
   const createR = await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -120,7 +116,6 @@ async function createPlaylistAndAdd(accessToken, uris, title, description) {
   });
   if (!createR.ok) throw new Error(`Spotify create ${createR.status}`);
   const playlist = await createR.json();
-
   for (let i = 0; i < uris.length; i += 100) {
     const chunk = uris.slice(i, i + 100);
     const addR = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
@@ -132,3 +127,8 @@ async function createPlaylistAndAdd(accessToken, uris, title, description) {
   }
   return playlist;
 }
+__name(createPlaylistAndAdd, "createPlaylistAndAdd");
+export {
+  index_default as default
+};
+//# sourceMappingURL=index.js.map

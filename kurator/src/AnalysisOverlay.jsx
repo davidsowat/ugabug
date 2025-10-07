@@ -1,21 +1,31 @@
-import React from 'react';
-// FEL: import './styles/AnalysisOverlay.css';
-// RÄTT:
-import './styles/AnalysisOverlay.css'; // Förutsatt att filen ligger i src/
+import { useEffect, useState } from "react";
 
-const AnalysisOverlay = ({ steps }) => { // 'steps' är prop från din ursprungliga kod
-    // I den nya App.jsx använder vi 'message', men vi kan anpassa oss här.
-    // Låt oss förutsätta att `steps` är meddelandet som ska visas.
-    const message = Array.isArray(steps) ? steps.join(' ') : steps;
+export default function PlaylistSelector({ token, onSelect }) {
+  const [items, setItems] = useState([]);
 
-    return (
-        <div className="overlay">
-            <div className="popup">
-                <p>{message || 'Arbetar...'}</p>
-                {/* Du kan lägga till en spinner eller annan grafik här om du vill */}
-            </div>
-        </div>
-    );
-};
+  useEffect(() => {
+    (async () => {
+      if (!token) return;
+      const r = await fetch("https://api.spotify.com/v1/me/playlists?limit=50", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!r.ok) return;
+      const j = await r.json();
+      setItems(j.items || []);
+    })();
+  }, [token]);
 
-export default AnalysisOverlay;
+  return (
+    <ul className="playlist-list">
+      {items.map((pl) => (
+        <li key={pl.id} className="playlist-item" onClick={() => onSelect?.(pl)}>
+          <img className="playlist-item-image" src={pl.images?.[0]?.url || ""} alt="" />
+          <div className="playlist-item-info">
+            <span className="playlist-item-title">{pl.name}</span>
+            <span className="playlist-item-owner">Spellista • {pl.owner?.display_name || ""}</span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
