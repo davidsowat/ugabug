@@ -5,10 +5,10 @@ import App from "./App.jsx";
 import LoginPage from "./LoginPage.jsx";
 import AuthCallback from "./AuthCallback.jsx";
 
-import "./index.css";             // behåll dina css
-import "./PlaylistSelector.css";
-import "./CriteriaSelection.css";
-import "./ResultPage.css";
+import "./styles/index.css";             // behåll dina css
+import "./styles/PlaylistSelector.css";
+import "./styles/CriteriaSelection.css";
+import "./styles/ResultPage.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import './PlaylistSelector.css';
+import './styles/PlaylistSelector.css';
 import CriteriaSelection from './CriteriaSelection';
 
 const PlaylistSelector = ({ token, onLogout, handleGeneratePlaylist }) => {

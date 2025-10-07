@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './CriteriaSelection.css';
+import './styles/CriteriaSelection.css';
 
 const genreOptions = ["Pop", "Rock", "Hip Hop", "RnB", "Elektroniskt", "Indie", "House", "Techno", "Soul", "Funk", "Jazz", "Metal", "Punk", "Ambient", "Country", "Folk", "Klassiskt", "Reggae"];
 const moodOptions = ["Glad", "Energisk", "Fokus", "Avslappnad", "Ledsen", "Romantisk", "Träning", "Fest", "Mysig", "Dramatisk", "Melankolisk", "Hoppfull"];

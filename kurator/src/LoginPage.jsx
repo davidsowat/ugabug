@@ -1,5 +1,5 @@
 import React from "react";
-import "./LoginPage.css"; // Se till att den här raden finns och är korrekt
+import "./styles/LoginPage.css"; // Se till att den här raden finns och är korrekt
 import spotifyLogo from "./Spotify_Primary_Logo_RGB_White.png";
 
 // PKCE-hjälpfunktioner för inloggning
