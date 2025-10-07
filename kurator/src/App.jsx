@@ -1,144 +1,88 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import LoginPage from './LoginPage';
-import PlaylistSelector from './PlaylistSelector';
-import ResultPage from './ResultPage';
-import AuthCallback from './AuthCallback';
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_BASE } from "./services/api";
+import PlaylistSelector from "./components/PlaylistSelector";
+import CriteriaForm from "./components/CriteriaForm";
+import ResultView from "./components/ResultView";
 
-const AnalysisOverlay = ({ message }) => (
-  <div style={{
-    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.85)', display: 'flex',
-    justifyContent: 'center', alignItems: 'center', zIndex: 1000,
-    color: 'white', flexDirection: 'column', textAlign: 'center', padding: '1rem'
-  }}>
-    <div style={{
-      border: '4px solid rgba(255, 255, 255, 0.2)',
-      borderLeftColor: '#1DB954',
-      borderRadius: '50%',
-      width: '50px',
-      height: '50px',
-      animation: 'spin 1s linear infinite',
-      marginBottom: '1.5rem'
-    }}></div>
-    <p style={{ fontSize: '1.5rem' }}>{message}</p>
-    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-  </div>
-);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const App = () => {
-    const [accessToken, setAccessToken] = useState(localStorage.getItem('spotify_access_token'));
-    const [userId, setUserId] = useState(localStorage.getItem('spotify_user_id'));
-    const [sessionExpiry, setSessionExpiry] = useState(localStorage.getItem('spotify_session_expiry'));
-    const [generatedResult, setGeneratedResult] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [loadingMessage, setLoadingMessage] = useState('');
-    const navigate = useNavigate();
+export default function App() {
+  const [token, setToken] = useState(null);
+  const [tokenErr, setTokenErr] = useState("");
 
-    useEffect(() => {
-        const fetchUserId = async () => {
-            if (accessToken && !userId) {
-                try {
-                    const { data } = await axios.get("https://api.spotify.com/v1/me", { headers: { Authorization: `Bearer ${accessToken}` } });
-                    setUserId(data.id);
-                    localStorage.setItem('spotify_user_id', data.id);
-                } catch (error) { console.error("Kunde inte hämta användar-ID", error); }
-            }
-        };
-        fetchUserId();
-    }, [accessToken, userId]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [criteria, setCriteria] = useState({});
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [aiErr, setAiErr] = useState("");
+  const [result, setResult] = useState(null);
 
-    const handleLogout = useCallback(() => {
-        setAccessToken(null); setUserId(null); localStorage.clear(); navigate('/');
-    }, [navigate]);
+  useEffect(() => {
+    try {
+      const t = sessionStorage.getItem("spotify_access_token");
+      if (t) setToken(t);
+      else setTokenErr("Ingen Spotify-token hittades. Logga in först.");
+    } catch {
+      setTokenErr("Kunde inte läsa Spotify-token.");
+    }
+  }, []);
 
-    useEffect(() => {
-        if (sessionExpiry && new Date().getTime() > sessionExpiry) { handleLogout(); }
-    }, [sessionExpiry, handleLogout]);
+  async function runAnalyze() {
+    if (!token) { setAiErr("Ingen Spotify-token. Logga in först."); return; }
+    if (!selectedPlaylist?.id) { setAiErr("Välj en spellista."); return; }
 
-    const handleTokenReceived = (token, expiresIn) => {
-        setAccessToken(token); localStorage.setItem('spotify_access_token', token);
-        const expiryTime = new Date().getTime() + expiresIn * 1000;
-        localStorage.setItem('spotify_session_expiry', expiryTime);
-        setSessionExpiry(expiryTime);
-        setUserId(null); localStorage.removeItem('spotify_user_id'); navigate('/');
-    };
+    setLoadingAI(true);
+    setAiErr("");
+    setResult(null);
+    try {
+      await sleep(150);
+      const { data } = await axios.post(`${API_BASE}/analyze`, {
+        token,
+        playlistId: selectedPlaylist.id,
+        criteria,
+        createNew: true,
+        llmLimit: 300,
+      });
+      if (!data?.ok) throw new Error(data?.error || "Okänt fel");
+      setResult(data);
+    } catch (e) {
+      setAiErr("Kunde inte analysera. Testa igen (token/scopes, nätverk, rate-limit).");
+    } finally {
+      setLoadingAI(false);
+    }
+  }
 
-    const handleGeneratePlaylist = async (criteria, playlistForGeneration) => {
-        if (!playlistForGeneration || !userId) return;
-        setIsLoading(true);
+  return (
+    <div style={app}>
+      <header style={header}>
+        <h1 style={{ margin: 0, fontSize: 28 }}>🎧 TrackCurator</h1>
+        <p style={{ marginTop: 6, opacity: 0.85 }}>AI-kurering – allt hostat på Cloudflare.</p>
+      </header>
 
-        try {
-            setLoadingMessage(`Hämtar hela spellistan...`);
-            let allTracks = []; let nextUrl = playlistForGeneration.tracks.href;
-            while (nextUrl) {
-                const tracksResponse = await axios.get(nextUrl, { headers: { 'Authorization': `Bearer ${accessToken}` }});
-                allTracks = allTracks.concat(tracksResponse.data.items.filter(item => item.track));
-                nextUrl = tracksResponse.data.next;
-                setLoadingMessage(`Hämtar... (${allTracks.length} / ${playlistForGeneration.tracks.total} låtar)`);
-            }
-            
-            setLoadingMessage("Analyserar artister...");
-            const artistIds = [...new Set(allTracks.flatMap(item => item.track.artists.map(a => a.id)))];
-            const artistGenreMap = new Map();
-            for (let i = 0; i < artistIds.length; i += 50) {
-                const chunk = artistIds.slice(i, i + 50);
-                const artistsResponse = await axios.get(`https://api.spotify.com/v1/artists?ids=${chunk.join(',')}`, { headers: { 'Authorization': `Bearer ${accessToken}` }});
-                artistsResponse.data.artists.forEach(artist => artistGenreMap.set(artist.id, artist.genres));
-            }
-            const fullTrackData = allTracks.map(item => ({ name: item.track.name, artist: item.track.artists[0].name, genres: item.track.artists.flatMap(a => artistGenreMap.get(a.id) || []) }));
+      <section style={card}>
+        <strong>Spotify-status:</strong>{" "}
+        {token ? <span style={{ color: "green" }}>inloggad ✅</span> : <span style={{ color: "crimson" }}>ej inloggad ❌</span>}
+        {tokenErr && <div style={{ marginTop: 8, color: "crimson" }}>{tokenErr}</div>}
+      </section>
 
-            const batchSize = 500; const totalBatches = Math.ceil(fullTrackData.length / batchSize);
-            for (let i = 0; i < totalBatches; i++) {
-                const batchNumber = i + 1; const batch = fullTrackData.slice(i * batchSize, (i + 1) * batchSize);
-                setLoadingMessage(`Skickar låtar... (${(i + 1) * batchSize < fullTrackData.length ? (i + 1) * batchSize : fullTrackData.length} / ${fullTrackData.length})`);
-                await axios.post('http://localhost:3000/batch', { userId, batchNumber, totalBatches, tracks: batch });
-            }
+      <section style={card}>
+        <PlaylistSelector token={token} onSelect={setSelectedPlaylist} />
+      </section>
 
-            setLoadingMessage(`Ber AI:n att analysera de ${fullTrackData.length} låtarna...`);
-            const backendResponse = await axios.post('http://localhost:3000/analyze', { userId, criteria });
-            const aiResult = backendResponse.data;
-            
-            setLoadingMessage("Hittar rekommenderade låtar...");
-            const searchPromises = aiResult.songRecommendations.map(songString => axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(songString)}&type=track&limit=1`, { headers: { 'Authorization': `Bearer ${accessToken}` } }));
-            const searchResults = await Promise.allSettled(searchPromises);
-            const foundTracks = searchResults.filter(res => res.status === 'fulfilled' && res.value.data.tracks.items.length > 0).map(res => res.value.data.tracks.items[0]);
-            
-            setGeneratedResult({ ...aiResult, foundTracks, sourcePlaylistUri: playlistForGeneration.uri });
-            setIsLoading(false);
-            navigate('/result');
-        } catch (error) {
-           setIsLoading(false);
-           console.error("Fel under generering:", error);
-           alert("Något gick fel. Kontrollera konsolen.");
-        }
-    };
+      <section style={card}>
+        <CriteriaForm onChange={setCriteria} onSubmit={runAnalyze} disabled={loadingAI || !token || !selectedPlaylist}/>
+        {aiErr && <div style={{ marginTop: 8, color: "crimson" }}>{aiErr}</div>}
+      </section>
 
-    return (
-        <>
-            {isLoading && <AnalysisOverlay message={loadingMessage} />}
-            <Routes>
-                <Route path="/callback" element={<AuthCallback onTokenReceived={handleTokenReceived} />} />
-                <Route path="/" element={
-                    accessToken ?
-                        <PlaylistSelector
-                            token={accessToken}
-                            onLogout={handleLogout}
-                            handleGeneratePlaylist={handleGeneratePlaylist}
-                        /> :
-                        <LoginPage />
-                } />
-                <Route path="/result" element={
-                    <ResultPage
-                        resultData={generatedResult}
-                        onRestart={() => navigate('/')}
-                        accessToken={accessToken}
-                    />
-                } />
-            </Routes>
-        </>
-    );
-};
+      <ResultView result={result} />
 
-export default App;
+      <footer style={{ marginTop: 20, opacity: 0.6 }}>
+        <small>Backend: {API_BASE}</small>
+      </footer>
+    </div>
+  );
+}
+
+const app   = { maxWidth: 880, margin: "32px auto", padding: "0 16px", fontFamily: "Inter, system-ui, sans-serif", color: "#eaeaea" };
+const header= { marginBottom: 16 };
+const card  = { background: "#131313", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16, margin: "12px 0", boxShadow: "0 2px 10px rgba(0,0,0,.35)" };

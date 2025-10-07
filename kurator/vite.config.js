@@ -12,6 +12,6 @@ export default defineConfig({
     },
     port: 5173,
     strictPort: true,
-    host: 'trackcurator.org' // ✔️ bara domännamnet
+    host: '0.0.0.0' // ✔️ bara domännamnet
   },
 });

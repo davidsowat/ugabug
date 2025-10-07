@@ -1,103 +1,49 @@
-import React, { useEffect, useRef, useState } from "react";
-import "./styles/ResultPage.css";
-import axios from "axios";
-import ReactMarkdown from 'react-markdown';
+export default function ResultView({ result }) {
+  if (!result) return null;
 
-const ResultPage = ({ resultData, onRestart, accessToken }) => {
-  const embedRef = useRef(null);
-  const [saveStatus, setSaveStatus] = useState("");
-  const sourcePlaylistUri = resultData?.sourcePlaylistUri;
-
-  useEffect(() => {
-    if (!sourcePlaylistUri || !embedRef.current) return;
-    const scriptId = 'spotify-iframe-api';
-    const createPlayer = () => {
-      if (window.SpotifyIframeApi) {
-        embedRef.current.innerHTML = '';
-        const options = { width: '100%', height: '380', uri: sourcePlaylistUri };
-        IFrameAPI.createController(embedRef.current, options, () => {});
-      }
-    };
-
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://open.spotify.com/embed/iframe-api/v1";
-      script.async = true;
-      document.body.appendChild(script);
-      window.onSpotifyIframeApiReady = (IFrameAPI) => createPlayer();
-    } else {
-      createPlayer();
-    }
-  }, [sourcePlaylistUri]);
-
-  if (!resultData || !resultData.foundTracks) {
-    return (
-      <div className="result-container placeholder">
-        <h2>Laddar resultat...</h2>
-        <button onClick={onRestart} className="restart-button">Börja om</button>
-      </div>
-    );
-  }
-
-  const {
-    personalityAnalysis,
-    dominantGenres,
-    funFacts,
-    matchingReasoning,
-    foundTracks,
-  } = resultData;
-
-  const savePlaylistToLibrary = async () => {
-    // Spara-logik
-  };
+  const title = result.llm_title || "Ny spellista";
+  const desc  = result.llm_description || "AI-genererad beskrivning saknas.";
+  const count = result.counts?.curated ?? 0;
+  const total = result.counts?.original ?? 0;
+  const source= result.playlistMeta?.name ? ` • källa: ${result.playlistMeta.name}` : "";
+  const link  = result.newPlaylist?.external_urls?.spotify;
 
   return (
-    <div className="result-container">
-      <div className="result-header"><h1>Din nya mix är klar!</h1></div>
-
-      <div className="embed-player-container">
-        <h3>Lyssna på originalspellistan</h3>
-        <div ref={embedRef} className="embed-player"></div>
-      </div>
-      
-      <div className="ai-analysis-section">
-        <h2>🤖 AI-kuratorns analys</h2>
-        <div className="analysis-grid">
-          <div className="analysis-card"><h3>Personlighetsprofil</h3><p>{personalityAnalysis}</p></div>
-          <div className="analysis-card"><h3>Dominerande Genrer</h3><p>{dominantGenres?.join(", ")}</p></div>
-          <div className="analysis-card"><h3>Visste du att...</h3><p>{funFacts}</p></div>
+    <section style={card}>
+      <h3 style={{ marginTop: 0 }}>Resultat</h3>
+      <div style={{ marginBottom: 12 }}>
+        <div style={titleRow}>
+          <h2 style={{ margin: 0 }}>{title}</h2>
+          {link && (
+            <a href={link} target="_blank" rel="noreferrer" style={linkBtn}>
+              Öppna på Spotify ↗
+            </a>
+          )}
         </div>
+        <p style={{ marginTop: 6, opacity: 0.85 }}>{desc}</p>
+        <small style={{ opacity: 0.7 }}>
+          {count} kuraterade av {total} spår{source}
+        </small>
       </div>
 
-      <div className="reasoning-section">
-        <h2>🧠 Så här tänkte AI:n</h2>
-        <div className="reasoning-card"><ReactMarkdown>{matchingReasoning}</ReactMarkdown></div>
-      </div>
-
-      <div className="playlist-section">
-        <h2>🎧 Rekommenderade låtar ({foundTracks.length} st)</h2>
-        <div className="track-list">
-          {foundTracks.map((track, index) => (
-            <div className="track-item" key={track.id}>
-              <span className="track-number">{index + 1}</span>
-              <img src={track.album.images[2]?.url || ''} alt={track.album.name} />
-              <div className="track-info">
-                <strong className="track-title">{track.name}</strong>
-                <span className="track-artist">{track.artists.map(a => a.name).join(', ')}</span>
-              </div>
+      {Array.isArray(result.analysis?.cards) && result.analysis.cards.length > 0 && (
+        <div style={cardsGrid}>
+          {result.analysis.cards.map((c, i) => (
+            <div key={i} style={infoCard}>
+              <div style={{ fontSize: 20 }}>{c.emoji || "🎵"}</div>
+              <div style={{ fontWeight: 600 }}>{c.title || "Trivia"}</div>
+              <div style={{ fontSize: 14, opacity: 0.85, marginTop: 4 }}>{c.body}</div>
+              <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>{c.why_it_matters}</div>
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="actions-section">
-        <button onClick={savePlaylistToLibrary} className="save-button">Spara till Spotify</button>
-        <button onClick={onRestart} className="restart-button">Skapa en till</button>
-        {saveStatus && <p className="save-status">{saveStatus}</p>}
-      </div>
-    </div>
+      )}
+    </section>
   );
-};
+}
 
-export default ResultPage;
+const card = { background: "#131313", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16, margin: "12px 0", boxShadow: "0 2px 10px rgba(0,0,0,.35)" };
+const titleRow = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 };
+const linkBtn = { background: "#0e0e0e", border: "1px solid #2a2a2a", padding: "8px 10px", borderRadius: 10, color: "#87cefa", textDecoration: "none" };
+const cardsGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 12, marginTop: 6 };
+const infoCard = { background: "#0e0e0e", border: "1px solid #2a2a2a", borderRadius: 12, padding: 12 };

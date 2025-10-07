@@ -1,102 +1,67 @@
-import React, { useState } from 'react';
-import './CriteriaSelection.css';
+import { useState } from "react";
 
-const genreOptions = ["Pop", "Rock", "Hip Hop", "RnB", "Elektroniskt", "Indie", "House", "Techno", "Soul", "Funk", "Jazz", "Metal", "Punk", "Ambient", "Country", "Folk", "Klassiskt", "Reggae"];
-const moodOptions = ["Glad", "Energisk", "Fokus", "Avslappnad", "Ledsen", "Romantisk", "Träning", "Fest", "Mysig", "Dramatisk", "Melankolisk", "Hoppfull"];
-const descriptionOptions = ["Roadtrip", "Sena nätter", "Sommarkväll", "Plugga", "Middag med vänner", "Före festen", "Efterfesten", "Städa", "Solnedgång", "Regnig dag"];
+export default function CriteriaForm({ onChange, onSubmit, disabled }) {
+  const [criteria, setCriteria] = useState({
+    mood: "",
+    bpmRange: "",
+    genre: "",
+    length: "",
+  });
 
-const CriteriaSelection = ({ playlist, onConfirm }) => {
-  const [selectedGenres, setSelectedGenres] = useState([]);
-  const [selectedMoods, setSelectedMoods] = useState([]);
-  const [selectedDescriptions, setSelectedDescriptions] = useState([]);
-  const [bpmMin, setBpmMin] = useState(100);
-  const [bpmMax, setBpmMax] = useState(140);
-  const [duration, setDuration] = useState(60);
-  const [isGenreActive, setIsGenreActive] = useState(false);
-  const [isMoodActive, setIsMoodActive] = useState(false);
-  const [isDescriptionActive, setIsDescriptionActive] = useState(false);
-  const [isTempoActive, setIsTempoActive] = useState(false);
-  const [isDurationActive, setIsDurationActive] = useState(false);
-
-  const handleMultiSelect = (option, list, setter) => {
-    setter(prevList => prevList.includes(option) ? prevList.filter(item => item !== option) : [...prevList, option]);
-  };
-
-  const activateSection = (setter) => setter(true);
-
-  const handleConfirm = () => {
-    const criteria = {
-      genre: isGenreActive ? selectedGenres.join(', ') : '',
-      mood: isMoodActive ? selectedMoods.join(', ') : '',
-      description: isDescriptionActive ? selectedDescriptions.join(', ') : '',
-      bpmRange: isTempoActive ? `${bpmMin}-${bpmMax}` : '',
-      length: isDurationActive ? duration : '',
-    };
-    onConfirm(criteria, playlist); 
-  };
+  function patch(p) {
+    const next = { ...criteria, ...p };
+    setCriteria(next);
+    onChange?.(sanitize(next));
+  }
 
   return (
-    <div className="criteria-view-container">
-      <div className="criteria-header">
-        <h2>Sätt dina kriterier</h2>
-        <p>Klicka på en sektion för att aktivera den.</p>
+    <div>
+      <h3 style={{ marginTop: 0 }}>2) Välj kriterier</h3>
+      <div style={grid}>
+        <Field label="Mood (komma-separerat)">
+          <input style={input} placeholder="t.ex. fest, glad, fokus"
+                 value={criteria.mood} onChange={(e) => patch({ mood: e.target.value })}/>
+        </Field>
+        <Field label="BPM-intervall">
+          <input style={input} placeholder="t.ex. 118-132"
+                 value={criteria.bpmRange} onChange={(e) => patch({ bpmRange: e.target.value })}/>
+        </Field>
+        <Field label="Genrer (komma-separerat)">
+          <input style={input} placeholder="t.ex. house, pop"
+                 value={criteria.genre} onChange={(e) => patch({ genre: e.target.value })}/>
+        </Field>
+        <Field label="Total längd (min)">
+          <input style={input} type="number" min={0} step={5} placeholder="t.ex. 60"
+                 value={criteria.length} onChange={(e) => patch({ length: e.target.value })}/>
+        </Field>
       </div>
-      <div className="criteria-form">
-        <div className={`form-group ${!isGenreActive ? 'disabled' : ''}`} onClick={() => !isGenreActive && activateSection(setIsGenreActive)}>
-          <div className="form-group-header">
-            <input type="checkbox" id="genre-check" checked={isGenreActive} onChange={() => setIsGenreActive(!isGenreActive)} />
-            <label htmlFor="genre-check">Önskad genre</label>
-          </div>
-          <div className="button-grid">
-            {genreOptions.map(genre => (<button key={genre} className={`option-button ${selectedGenres.includes(genre) ? 'selected' : ''}`} onClick={() => handleMultiSelect(genre, selectedGenres, setSelectedGenres)} disabled={!isGenreActive}>{genre}</button>))}
-          </div>
-        </div>
-        <div className={`form-group ${!isMoodActive ? 'disabled' : ''}`} onClick={() => !isMoodActive && activateSection(setIsMoodActive)}>
-           <div className="form-group-header">
-            <input type="checkbox" id="mood-check" checked={isMoodActive} onChange={() => setIsMoodActive(!isMoodActive)} />
-            <label htmlFor="mood-check">Önskad stämning</label>
-          </div>
-          <div className="button-grid">
-            {moodOptions.map(mood => (<button key={mood} className={`option-button ${selectedMoods.includes(mood) ? 'selected' : ''}`} onClick={() => handleMultiSelect(mood, selectedMoods, setSelectedMoods)} disabled={!isMoodActive}>{mood}</button>))}
-          </div>
-        </div>
-        <div className={`form-group full-width ${!isDescriptionActive ? 'disabled' : ''}`} onClick={() => !isDescriptionActive && activateSection(setIsDescriptionActive)}>
-          <div className="form-group-header">
-            <input type="checkbox" id="desc-check" checked={isDescriptionActive} onChange={() => setIsDescriptionActive(!isDescriptionActive)} />
-            <label htmlFor="desc-check">Vad är du ute efter?</label>
-          </div>
-          <div className="button-grid">
-             {descriptionOptions.map(desc => (<button key={desc} className={`option-button ${selectedDescriptions.includes(desc) ? 'selected' : ''}`} onClick={() => handleMultiSelect(desc, selectedDescriptions, setSelectedDescriptions)} disabled={!isDescriptionActive}>{desc}</button>))}
-          </div>
-        </div>
-        <div className={`form-group full-width ${!isTempoActive ? 'disabled' : ''}`} onClick={() => !isTempoActive && activateSection(setIsTempoActive)}>
-          <div className="form-group-header">
-            <input type="checkbox" id="tempo-check" checked={isTempoActive} onChange={() => setIsTempoActive(!isTempoActive)} />
-            <label htmlFor="tempo-check">Specifikt tempo (BPM)</label>
-          </div>
-          <div className="range-slider">
-            <span>{bpmMin}</span>
-            <input type="range" min="60" max="200" value={bpmMin} onChange={(e) => setBpmMin(parseInt(e.target.value))} disabled={!isTempoActive} />
-            <span>{bpmMax}</span>
-            <input type="range" min="60" max="200" value={bpmMax} onChange={(e) => setBpmMax(parseInt(e.target.value))} disabled={!isTempoActive} />
-          </div>
-        </div>
-        <div className={`form-group full-width ${!isDurationActive ? 'disabled' : ''}`} onClick={() => !isDurationActive && activateSection(setIsDurationActive)}>
-          <div className="form-group-header">
-            <input type="checkbox" id="duration-check" checked={isDurationActive} onChange={() => setIsDurationActive(!isDurationActive)} />
-            <label htmlFor="duration-check">Minst speltid</label>
-          </div>
-          <div className="range-slider">
-            <input type="range" min="10" max="240" step="5" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} disabled={!isDurationActive} />
-            <span>{duration} min</span>
-          </div>
-        </div>
-        <button className="confirm-button" onClick={handleConfirm}>
-          ✨ Generera ny spellista ✨
-        </button>
-      </div>
+
+      <button style={button} onClick={() => onSubmit?.(sanitize(criteria))} disabled={disabled}>
+        3) Generera med AI
+      </button>
     </div>
   );
-};
+}
 
-export default CriteriaSelection;
+function Field({ label, children }) {
+  return (
+    <div>
+      <label style={{ display: "block", marginBottom: 6, fontSize: 13, opacity: 0.85 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 12, marginBottom: 12 };
+const input = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #2a2a2a", background: "#0e0e0e", color: "#eaeaea" };
+const button = { marginTop: 8, background: "#1db954", color: "#0a0a0a", fontWeight: 700, border: "none", padding: "12px 16px", borderRadius: 12, cursor: "pointer" };
+
+function sanitize(c) {
+  const out = { ...c };
+  out.mood = (out.mood || "").trim();
+  out.genre = (out.genre || "").trim();
+  out.bpmRange = (out.bpmRange || "").replace(/\s+/g, "");
+  const len = parseInt(out.length, 10);
+  out.length = Number.isFinite(len) ? Math.max(0, Math.min(len, 600)) : "";
+  return out;
+}
