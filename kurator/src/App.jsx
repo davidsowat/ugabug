@@ -1,31 +1,37 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE } from "./services/api.js";
-import PlaylistSelector from "./PlaylistSelector.jsx"; // ← din befintliga komponent
+
+// Dina befintliga komponenter
+import PlaylistSelector from "./PlaylistSelector.jsx";       // har redan CSS
+import CriteriaSelection from "./CriteriaSelection.jsx";     // har redan CSS
+import ResultPage from "./ResultPage.jsx";                   // visar resultat
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export default function App() {
-  // token från ditt befintliga loginflöde (PKCE)
+  // Spotify-token (satt av ditt loginflöde)
   const [token, setToken] = useState(null);
   const [tokenErr, setTokenErr] = useState("");
 
-  // vald spellista (från PlaylistSelector)
+  // Vald spellista från sidans vänsterkolumn
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
 
-  // kriterier (du kan koppla dessa vidare till dina Criteria* komponenter om du vill)
+  // Kriterier från CriteriaSelection
   const [criteria, setCriteria] = useState({
-    mood: "",
-    bpmRange: "",
-    genre: "",
-    length: "",
+    genres: [],       // array av strängar
+    moods: [],        // array av strängar
+    bpmMin: 0,
+    bpmMax: 0,
+    lengthMin: 0      // i minuter
   });
 
-  // AI/Result
-  const [loadingAI, setLoadingAI] = useState(false);
-  const [aiErr, setAiErr] = useState("");
+  // Läge/resultat
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
+  // Plocka token från sessionStorage (matcha ditt loginflöde)
   useEffect(() => {
     try {
       const t = sessionStorage.getItem("spotify_access_token");
@@ -36,149 +42,95 @@ export default function App() {
     }
   }, []);
 
-  async function runAnalyze() {
-    if (!token) { setAiErr("Ingen Spotify-token. Logga in först."); return; }
-    if (!selectedPlaylist?.id) { setAiErr("Välj en spellista."); return; }
+  // Kallas när du klickar på “Generera ny spellista”
+  async function handleGenerate() {
+    if (!token) { setError("Ingen Spotify-token. Logga in först."); return; }
+    if (!selectedPlaylist?.id) { setError("Välj en spellista."); return; }
 
-    setLoadingAI(true);
-    setAiErr("");
+    setSubmitting(true);
+    setError("");
     setResult(null);
 
     try {
-      await sleep(150);
-      const { data } = await axios.post(`${API_BASE}/analyze`, {
+      await sleep(120);
+
+      // Mappa dina UI-kriterier → backend-format
+      const payload = {
         token,
         playlistId: selectedPlaylist.id,
-        criteria: sanitizeCriteria(criteria),
         createNew: true,
         llmLimit: 300,
-      });
+        criteria: {
+          mood: criteria.moods.join(", "),                            // "Fest, Glad"
+          genre: criteria.genres.join(", "),                          // "House, Pop"
+          bpmRange: toBpmRange(criteria.bpmMin, criteria.bpmMax),     // "118-132" el. ""
+          length: criteria.lengthMin                                  // minuter (valfritt)
+        }
+      };
+
+      const { data } = await axios.post(`${API_BASE}/analyze`, payload);
       if (!data?.ok) throw new Error(data?.error || "Okänt fel");
       setResult(data);
-    } catch (_e) {
-      setAiErr("Kunde inte analysera. Testa igen (token/scopes, nätverk, rate-limit).");
+    } catch (e) {
+      setError("Kunde inte generera spellista. Testa igen (token/scopes, nätverk).");
     } finally {
-      setLoadingAI(false);
+      setSubmitting(false);
     }
   }
 
   return (
-    <div style={styles.app}>
-      <header style={styles.header}>
-        <h1 style={{ margin: 0 }}>🎧 TrackCurator</h1>
-        <p style={{ marginTop: 6, opacity: 0.85 }}>AI-kurering – allt hostat på Cloudflare.</p>
-      </header>
-
-      <section style={styles.card}>
-        <strong>Spotify-status:</strong>{" "}
-        {token ? <span style={{ color: "green" }}>inloggad ✅</span> : <span style={{ color: "crimson" }}>ej inloggad ❌</span>}
-        {tokenErr && <div style={styles.err}>{tokenErr}</div>}
-      </section>
-
-      <section style={styles.card}>
-        {/* Din PlaylistSelector.jsx hämtar listor med access-token och skickar upp vald spellista */}
-        <PlaylistSelector token={token} onSelect={setSelectedPlaylist} />
-      </section>
-
-      <section style={styles.card}>
-        <h3 style={{ marginTop: 0 }}>Kriterier</h3>
-        <div style={styles.grid}>
-          <Field label="Mood (komma-separerat)">
-            <input style={styles.input} placeholder="t.ex. fest, glad, fokus"
-              value={criteria.mood} onChange={(e)=>setCriteria(v=>({...v, mood:e.target.value}))}/>
-          </Field>
-          <Field label="BPM-intervall">
-            <input style={styles.input} placeholder="t.ex. 118-132"
-              value={criteria.bpmRange} onChange={(e)=>setCriteria(v=>({...v, bpmRange:e.target.value}))}/>
-          </Field>
-          <Field label="Genrer">
-            <input style={styles.input} placeholder="t.ex. house, pop"
-              value={criteria.genre} onChange={(e)=>setCriteria(v=>({...v, genre:e.target.value}))}/>
-          </Field>
-          <Field label="Total längd (min)">
-            <input style={styles.input} type="number" min={0} step={5} placeholder="t.ex. 60"
-              value={criteria.length} onChange={(e)=>setCriteria(v=>({...v, length:e.target.value}))}/>
-          </Field>
+    <div className="app">
+      {/* Vänster: Dina spellistor (din komponent + CSS) */}
+      <aside className="sidebar">
+        <PlaylistSelector
+          token={token}
+          onSelect={setSelectedPlaylist}   // får hela playlist-objektet
+        />
+        <div className="logout-row">
+          {/* Din befintliga “Logga ut”-knapp kan ligga kvar här */}
         </div>
+      </aside>
 
-        <button style={styles.button} onClick={runAnalyze} disabled={loadingAI || !token || !selectedPlaylist}>
-          {loadingAI ? "Skapar kurering…" : "Generera med AI"}
-        </button>
-        {aiErr && <div style={styles.err}>{aiErr}</div>}
-      </section>
+      {/* Höger: Det stora kortet med kriterier och CTA-knapp */}
+      <main className="content">
+        {selectedPlaylist && (
+          <header className="playlist-header">
+            <h1 className="playlist-title">{selectedPlaylist.name}</h1>
+            {/* Din befintliga artwork/ägare/antal spår kan ligga kvar här */}
+          </header>
+        )}
 
-      {result && (
-        <section style={styles.card}>
-          <h3 style={{ marginTop: 0 }}>Resultat</h3>
-          <div style={{ marginBottom: 12 }}>
-            <div style={styles.titleRow}>
-              <h2 style={{ margin: 0 }}>{result.llm_title || "Ny spellista"}</h2>
-              {result.newPlaylist?.external_urls?.spotify && (
-                <a href={result.newPlaylist.external_urls.spotify} target="_blank" rel="noreferrer" style={styles.linkBtn}>
-                  Öppna på Spotify ↗
-                </a>
-              )}
-            </div>
-            <p style={{ marginTop: 6, opacity: 0.85 }}>
-              {result.llm_description || "AI-genererad beskrivning saknas."}
-            </p>
-            <small style={{ opacity: 0.7 }}>
-              {result.counts?.curated ?? 0} kuraterade av {result.counts?.original ?? 0} spår
-              {result.playlistMeta?.name ? ` • källa: ${result.playlistMeta.name}` : ""}
-            </small>
-          </div>
+        {/* Kriterier – behåll din look; vi skickar upp state via props */}
+        <section className="criteria-card">
+          <CriteriaSelection
+            // Dessa två props behöver du implementera i CriteriaSelection (se filen nedan):
+            onChange={setCriteria}            // skickar upp {genres,moods,bpmMin,bpmMax,lengthMin}
+            onGenerate={handleGenerate}       // körs när du trycker på knappen
+            submitting={submitting}
+          />
 
-          {Array.isArray(result.analysis?.cards) && result.analysis.cards.length > 0 && (
-            <div style={styles.cardsGrid}>
-              {result.analysis.cards.map((c, i) => (
-                <div key={i} style={styles.infoCard}>
-                  <div style={{ fontSize: 20 }}>{c.emoji || "🎵"}</div>
-                  <div style={{ fontWeight: 600 }}>{c.title || "Trivia"}</div>
-                  <div style={{ fontSize: 14, opacity: 0.85, marginTop: 4 }}>{c.body}</div>
-                  <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>{c.why_it_matters}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Felmeddelande (behåller din stil – lägg valfri klass) */}
+          {error && <div className="error-text">{error}</div>}
+          {tokenErr && <div className="error-text">{tokenErr}</div>}
         </section>
-      )}
 
-      <footer style={{ marginTop: 20, opacity: 0.6 }}>
-        <small>Backend: {API_BASE}</small>
-      </footer>
+        {/* Resultat – din sida/komponent renderar titeln, beskrivningen, trivia mm */}
+        {result && (
+          <section className="result-card">
+            <ResultPage
+              result={result}                  // { newPlaylist, llm_title, llm_description, analysis.cards, ... }
+            />
+          </section>
+        )}
+      </main>
     </div>
   );
 }
 
-function Field({ label, children }) {
-  return (
-    <div>
-      <label style={{ display: "block", marginBottom: 6, fontSize: 13, opacity: 0.85 }}>{label}</label>
-      {children}
-    </div>
-  );
+function toBpmRange(min, max) {
+  const a = parseInt(min, 10), b = parseInt(max, 10);
+  if (Number.isFinite(a) && Number.isFinite(b) && a > 0 && b > 0 && b >= a) {
+    return `${a}-${b}`;
+  }
+  return "";
 }
-
-function sanitizeCriteria(c) {
-  const out = { ...c };
-  out.mood     = (out.mood || "").trim();
-  out.genre    = (out.genre || "").trim();
-  out.bpmRange = (out.bpmRange || "").replace(/\s+/g, "");
-  const len    = parseInt(out.length, 10);
-  out.length   = Number.isFinite(len) ? Math.max(0, Math.min(len, 600)) : "";
-  return out;
-}
-
-const styles = {
-  app: { maxWidth: 880, margin: "32px auto", padding: "0 16px", fontFamily: "Inter, system-ui, sans-serif", color: "#eaeaea" },
-  header: { marginBottom: 16 },
-  card: { background: "#131313", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16, margin: "12px 0", boxShadow: "0 2px 10px rgba(0,0,0,.35)" },
-  err: { marginTop: 8, color: "crimson" },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 12, marginBottom: 12 },
-  input: { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #2a2a2a", background: "#0e0e0e", color: "#eaeaea" },
-  button: { marginTop: 8, background: "#1db954", color: "#0a0a0a", fontWeight: 700, border: "none", padding: "12px 16px", borderRadius: 12, cursor: "pointer" },
-  titleRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  linkBtn: { background: "#0e0e0e", border: "1px solid #2a2a2a", padding: "8px 10px", borderRadius: 10, color: "#87cefa", textDecoration: "none" },
-  cardsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 12, marginTop: 6 },
-  infoCard: { background: "#0e0e0e", border: "1px solid #2a2a2a", borderRadius: 12, padding: 12 }
-};
