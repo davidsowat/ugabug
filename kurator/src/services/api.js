@@ -1,14 +1,11 @@
-// Bas-URL till din Worker (styr via env i Pages)
-export const API_BASE =
-  import.meta.env.VITE_API_BASE || "https://api.trackcurator.org";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
-import axios from "axios";
-export const api = axios.create({
-  baseURL: API_BASE,
-  timeout: 30000,
-  headers: { "Content-Type": "application/json" },
-});
-
-// Helpers
-export const postAnalyze = (payload) => api.post("/analyze", payload);
-export const postBatch   = (body)    => api.post("/batch", body);
+export async function callOpenAI(payload) {
+  const response = await fetch(`${API_BASE}/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`API error ${response.status}`);
+  return response.json();
+}

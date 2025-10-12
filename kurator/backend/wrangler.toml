@@ -1,0 +1,23 @@
+name = "spotify-kurator-backend"
+main = "src/index.js"
+compatibility_date = "2025-10-12"
+
+[vars]
+OPENAI_API_KEY = ""
+SPOTIFY_CLIENT_ID = ""
+SPOTIFY_CLIENT_SECRET = ""
+
+routes = [
+  { pattern = "api.trackcurator.org/*", zone_name = "trackcurator.org" }
+]
+
+# wrangler.toml (wrangler v3.88.0^)
+[observability]
+enabled = false
+
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+
